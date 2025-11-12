@@ -1,0 +1,277 @@
+------------------------------------------------------------ 
+
+-- DROP TABLES (order matters) 
+
+------------------------------------------------------------ 
+
+DROP TABLE booking_item CASCADE CONSTRAINTS; 
+
+DROP TABLE booking CASCADE CONSTRAINTS; 
+
+DROP TABLE payment CASCADE CONSTRAINTS; 
+
+DROP TABLE passenger CASCADE CONSTRAINTS; 
+
+DROP TABLE flight CASCADE CONSTRAINTS; 
+
+DROP TABLE fare_class CASCADE CONSTRAINTS; 
+
+DROP TABLE airport CASCADE CONSTRAINTS; 
+
+DROP TABLE aircraft CASCADE CONSTRAINTS; 
+
+DROP TABLE staff CASCADE CONSTRAINTS; 
+
+DROP TABLE audit_log CASCADE CONSTRAINTS; 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 1. AIRPORT 
+
+------------------------------------------------------------ 
+
+CREATE TABLE airport (  
+
+  airport_code CHAR(3) PRIMARY KEY, 
+
+  name         VARCHAR2(80) NOT NULL, 
+
+  city         VARCHAR2(60) NOT NULL, 
+
+  country      VARCHAR2(60) NOT NULL 
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 2. FARE CLASS (LOOKUP) 
+
+------------------------------------------------------------ 
+
+CREATE TABLE fare_class ( 
+
+  fare_code   VARCHAR2(2) PRIMARY KEY,     -- Y, W, J, F 
+
+  name        VARCHAR2(30) NOT NULL, 
+
+  base_mult   NUMBER(6,3)  NOT NULL CHECK (base_mult > 0) 
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 3. AIRCRAFT 
+
+------------------------------------------------------------ 
+
+CREATE TABLE aircraft ( 
+
+  aircraft_id  NUMBER PRIMARY KEY, 
+
+  model        VARCHAR2(40) NOT NULL,      
+
+  manufacturer VARCHAR2(40) NOT NULL, 
+
+  capacity     NUMBER(4)    NOT NULL CHECK (capacity > 0) 
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 4. FLIGHT 
+
+------------------------------------------------------------ 
+
+CREATE TABLE flight ( 
+
+  flight_id              NUMBER PRIMARY KEY, 
+
+  flight_number          VARCHAR2(8) NOT NULL UNIQUE,       
+
+  departure_airport_code CHAR(3)    NOT NULL REFERENCES airport(airport_code), 
+
+  arrival_airport_code   CHAR(3)    NOT NULL REFERENCES airport(airport_code), 
+
+  aircraft_id            NUMBER     NOT NULL REFERENCES aircraft(aircraft_id), 
+
+  departure_time         DATE       NOT NULL, 
+
+  arrival_time           DATE       NOT NULL, 
+
+  base_price             NUMBER(8,2) NOT NULL CHECK (base_price >= 0), 
+
+  capacity               NUMBER(4)   NOT NULL CHECK (capacity > 0), 
+
+  seats_sold             NUMBER(4)   DEFAULT 0 CHECK (seats_sold >= 0) 
+
+); 
+
+ 
+
+ALTER TABLE flight ADD CONSTRAINT chk_flight_times 
+
+  CHECK (arrival_time > departure_time); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 5. PASSENGER (WITH ACCESSIBILITY SUPPORT) 
+
+------------------------------------------------------------ 
+
+CREATE TABLE passenger ( 
+
+  passenger_id        NUMBER PRIMARY KEY, 
+
+  full_name           VARCHAR2(100) NOT NULL, 
+
+  email               VARCHAR2(120) NOT NULL UNIQUE, 
+
+  phone               VARCHAR2(30), 
+
+  passport_no         VARCHAR2(20), 
+
+  needs_assistance    CHAR(1) DEFAULT 'N',     -- 'Y' or 'N' 
+
+  assistance_details  VARCHAR2(200)            -- e.g. 'Wheelchair', 'Blind passenger' 
+
+); 
+
+------------------------------------------------------------ 
+
+-- 6. BOOKING 
+
+------------------------------------------------------------ 
+
+CREATE TABLE booking ( 
+
+  booking_id        NUMBER PRIMARY KEY, 
+
+  passenger_id      NUMBER NOT NULL REFERENCES passenger(passenger_id), 
+
+  booked_at         DATE   DEFAULT SYSDATE, 
+
+  confirmation_code VARCHAR2(12) NOT NULL UNIQUE, 
+
+  total_amount      NUMBER(10,2) DEFAULT 0 CHECK (total_amount >= 0), 
+
+  status            VARCHAR2(12) DEFAULT 'PENDING' 
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 7. BOOKING ITEM 
+
+------------------------------------------------------------ 
+
+CREATE TABLE booking_item ( 
+
+  booking_item_id NUMBER PRIMARY KEY, 
+
+  booking_id      NUMBER NOT NULL REFERENCES booking(booking_id) ON DELETE CASCADE, 
+
+  flight_id       NUMBER NOT NULL REFERENCES flight(flight_id), 
+
+  fare_code       VARCHAR2(2) NOT NULL REFERENCES fare_class(fare_code), 
+
+  seat_no         VARCHAR2(5), 
+
+  price_paid      NUMBER(8,2) NOT NULL CHECK (price_paid >= 0) 
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 8. PAYMENT 
+
+------------------------------------------------------------ 
+
+CREATE TABLE payment ( 
+
+  payment_id    NUMBER PRIMARY KEY, 
+
+  booking_id    NUMBER NOT NULL REFERENCES booking(booking_id) ON DELETE CASCADE, 
+
+  paid_at       DATE   DEFAULT SYSDATE, 
+
+  amount        NUMBER(10,2) NOT NULL CHECK (amount >= 0), 
+
+  method        VARCHAR2(20) NOT NULL,  
+
+  status        VARCHAR2(12) DEFAULT 'SUCCESS'  
+
+); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 9. STAFF (CLEAN VERSION) 
+
+------------------------------------------------------------ 
+
+CREATE TABLE staff ( 
+
+  staff_id   NUMBER PRIMARY KEY, 
+
+  full_name  VARCHAR2(100) NOT NULL, 
+
+  role       VARCHAR2(30)  NOT NULL,     -- Admin, Agent, Pilot, Crew 
+
+  email      VARCHAR2(120) NOT NULL UNIQUE, 
+
+  salary     NUMBER(10,2) 
+
+); 
+
+ 
+
+ALTER TABLE flight ADD pilot_id NUMBER; 
+
+ 
+
+ALTER TABLE flight  
+
+  ADD CONSTRAINT fk_flight_pilot  
+
+  FOREIGN KEY (pilot_id) REFERENCES staff(staff_id); 
+
+ 
+
+------------------------------------------------------------ 
+
+-- 10. AUDIT LOG 
+
+------------------------------------------------------------ 
+
+CREATE TABLE audit_log ( 
+
+  audit_id   NUMBER PRIMARY KEY, 
+
+  table_name VARCHAR2(30) NOT NULL, 
+
+  pk_value   VARCHAR2(100) NOT NULL, 
+
+  action     VARCHAR2(10) NOT NULL, 
+
+  changed_at DATE DEFAULT SYSDATE, 
+
+  changed_by VARCHAR2(60) DEFAULT USER, 
+
+  details    VARCHAR2(4000) 
+
+); 
