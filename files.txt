@@ -1,8 +1,8 @@
------------------------------------------------------------- 
+ 
 
 -- DROP TABLES (order matters) 
 
------------------------------------------------------------- 
+ 
 
 DROP TABLE booking_item CASCADE CONSTRAINTS; 
 
@@ -26,11 +26,11 @@ DROP TABLE audit_log CASCADE CONSTRAINTS;
 
  
 
------------------------------------------------------------- 
+ 
 
 -- 1. AIRPORT 
 
------------------------------------------------------------- 
+ 
 
 CREATE TABLE airport (  
 
@@ -46,11 +46,7 @@ CREATE TABLE airport (
 
  
 
------------------------------------------------------------- 
-
 -- 2. FARE CLASS (LOOKUP) 
-
------------------------------------------------------------- 
 
 CREATE TABLE fare_class ( 
 
@@ -64,11 +60,9 @@ CREATE TABLE fare_class (
 
  
 
------------------------------------------------------------- 
+ 
 
 -- 3. AIRCRAFT 
-
------------------------------------------------------------- 
 
 CREATE TABLE aircraft ( 
 
@@ -84,11 +78,9 @@ CREATE TABLE aircraft (
 
  
 
------------------------------------------------------------- 
+ 
 
 -- 4. FLIGHT 
-
------------------------------------------------------------- 
 
 CREATE TABLE flight ( 
 
@@ -122,11 +114,9 @@ ALTER TABLE flight ADD CONSTRAINT chk_flight_times
 
  
 
------------------------------------------------------------- 
-
 -- 5. PASSENGER (WITH ACCESSIBILITY SUPPORT) 
 
------------------------------------------------------------- 
+ 
 
 CREATE TABLE passenger ( 
 
@@ -140,17 +130,15 @@ CREATE TABLE passenger (
 
   passport_no         VARCHAR2(20), 
 
-  needs_assistance    CHAR(1) DEFAULT 'N',     -- 'Y' or 'N' 
+  needs_assistance    CHAR(3) DEFAULT 'NO',     -- 'Y' or 'N' 
 
   assistance_details  VARCHAR2(200)            -- e.g. 'Wheelchair', 'Blind passenger' 
 
 ); 
 
------------------------------------------------------------- 
+ 
 
 -- 6. BOOKING 
-
------------------------------------------------------------- 
 
 CREATE TABLE booking ( 
 
@@ -170,11 +158,7 @@ CREATE TABLE booking (
 
  
 
------------------------------------------------------------- 
-
 -- 7. BOOKING ITEM 
-
------------------------------------------------------------- 
 
 CREATE TABLE booking_item ( 
 
@@ -194,11 +178,9 @@ CREATE TABLE booking_item (
 
  
 
------------------------------------------------------------- 
-
 -- 8. PAYMENT 
 
------------------------------------------------------------- 
+ 
 
 CREATE TABLE payment ( 
 
@@ -218,11 +200,9 @@ CREATE TABLE payment (
 
  
 
------------------------------------------------------------- 
-
 -- 9. STAFF (CLEAN VERSION) 
 
------------------------------------------------------------- 
+ 
 
 CREATE TABLE staff ( 
 
@@ -252,11 +232,7 @@ ALTER TABLE flight
 
  
 
------------------------------------------------------------- 
-
 -- 10. AUDIT LOG 
-
------------------------------------------------------------- 
 
 CREATE TABLE audit_log ( 
 
@@ -275,3 +251,437 @@ CREATE TABLE audit_log (
   details    VARCHAR2(4000) 
 
 ); 
+
+ 
+
+-- THE SEQUENCE PART 
+
+-- 11. SEQUENCES (FOR PRIMARY KEYS + AUDIT) 
+
+ 
+
+-- For AIRCRAFT.aircraft_id 
+
+CREATE SEQUENCE seq_aircraft 
+
+  START WITH 100 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For FLIGHT.flight_id 
+
+CREATE SEQUENCE seq_flight 
+
+  START WITH 1000 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For PASSENGER.passenger_id 
+
+CREATE SEQUENCE seq_passenger 
+
+  START WITH 5000 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For BOOKING.booking_id 
+
+CREATE SEQUENCE seq_booking 
+
+  START WITH 9000 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For BOOKING_ITEM.booking_item_id 
+
+CREATE SEQUENCE seq_booking_item 
+
+  START WITH 20000 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For PAYMENT.payment_id 
+
+CREATE SEQUENCE seq_payment 
+
+  START WITH 30000 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For STAFF.staff_id 
+
+CREATE SEQUENCE seq_staff 
+
+  START WITH 600 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- For AUDIT_LOG.audit_id 
+
+CREATE SEQUENCE seq_audit 
+
+  START WITH 1 
+
+  INCREMENT BY 1 
+
+  NOCACHE; 
+
+ 
+
+-- 12. BEFORE INSERT TRIGGERS (USE SEQUENCES FOR PKs) 
+
+ 
+
+-- AIRCRAFT.aircraft_id 
+
+CREATE OR REPLACE TRIGGER trg_aircraft_bi 
+
+BEFORE INSERT ON aircraft 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.aircraft_id IS NULL THEN 
+
+    :NEW.aircraft_id := seq_aircraft.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- FLIGHT.flight_id 
+
+CREATE OR REPLACE TRIGGER trg_flight_bi 
+
+BEFORE INSERT ON flight 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.flight_id IS NULL THEN 
+
+    :NEW.flight_id := seq_flight.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- PASSENGER.passenger_id 
+
+CREATE OR REPLACE TRIGGER trg_passenger_bi 
+
+BEFORE INSERT ON passenger 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.passenger_id IS NULL THEN 
+
+    :NEW.passenger_id := seq_passenger.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- BOOKING.booking_id 
+
+CREATE OR REPLACE TRIGGER trg_booking_bi 
+
+BEFORE INSERT ON booking 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.booking_id IS NULL THEN 
+
+    :NEW.booking_id := seq_booking.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- BOOKING_ITEM.booking_item_id 
+
+CREATE OR REPLACE TRIGGER trg_booking_item_bi 
+
+BEFORE INSERT ON booking_item 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.booking_item_id IS NULL THEN 
+
+    :NEW.booking_item_id := seq_booking_item.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- PAYMENT.payment_id 
+
+CREATE OR REPLACE TRIGGER trg_payment_bi 
+
+BEFORE INSERT ON payment 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.payment_id IS NULL THEN 
+
+    :NEW.payment_id := seq_payment.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- STAFF.staff_id 
+
+CREATE OR REPLACE TRIGGER trg_staff_bi 
+
+BEFORE INSERT ON staff 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.staff_id IS NULL THEN 
+
+    :NEW.staff_id := seq_staff.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+ 
+
+-- AUDIT_LOG.audit_id 
+
+CREATE OR REPLACE TRIGGER trg_audit_bi 
+
+BEFORE INSERT ON audit_log 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  IF :NEW.audit_id IS NULL THEN 
+
+    :NEW.audit_id := seq_audit.NEXTVAL; 
+
+  END IF; 
+
+END; 
+
+/ 
+
+--Searching for flights 
+
+CREATE INDEX idx_flight_route_date 
+
+ON flight (departure_airport_code, arrival_airport_code, departure_time); 
+
+-- (Passenger email already indexed by UNIQUE constraint) 
+
+-- (Booking confirmation_code already indexed by UNIQUE constraint) 
+
+ 
+
+-- 14. AUDIT TRIGGERS (log changes into AUDIT_LOG) 
+
+ 
+
+-- 1) Log updates to FLIGHT (price, seats, etc.) 
+
+CREATE OR REPLACE TRIGGER trg_flight_au 
+
+AFTER UPDATE ON flight 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  INSERT INTO audit_log ( 
+
+    audit_id, 
+
+    table_name, 
+
+    pk_value, 
+
+    action, 
+
+    details 
+
+  ) VALUES ( 
+
+    seq_audit.NEXTVAL,                 -- sequence used on UPDATE 
+
+    'FLIGHT', 
+
+    TO_CHAR(:NEW.flight_id), 
+
+    'UPDATE', 
+
+    'seats_sold: ' || :OLD.seats_sold || ' -> ' || :NEW.seats_sold || 
+
+    ', base_price: ' || :OLD.base_price || ' -> ' || :NEW.base_price 
+
+  ); 
+
+END; 
+
+/ 
+
+ 
+
+-- 2) Log updates to BOOKING (total, status) 
+
+CREATE OR REPLACE TRIGGER trg_booking_au 
+
+AFTER UPDATE ON booking 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  INSERT INTO audit_log ( 
+
+    audit_id, 
+
+    table_name, 
+
+    pk_value, 
+
+    action, 
+
+    details 
+
+  ) VALUES ( 
+
+    seq_audit.NEXTVAL, 
+
+    'BOOKING', 
+
+    TO_CHAR(:NEW.booking_id), 
+
+    'UPDATE', 
+
+    'total_amount: ' || :OLD.total_amount || ' -> ' || :NEW.total_amount || 
+
+    ', status: ' || :OLD.status || ' -> ' || :NEW.status 
+
+  ); 
+
+END; 
+
+/ 
+
+ 
+
+-- 3) Log new PAYMENTS 
+
+CREATE OR REPLACE TRIGGER trg_payment_ai 
+
+AFTER INSERT ON payment 
+
+FOR EACH ROW 
+
+BEGIN 
+
+  INSERT INTO audit_log ( 
+
+    audit_id, 
+
+    table_name, 
+
+    pk_value, 
+
+    action, 
+
+    details 
+
+  ) VALUES ( 
+
+    seq_audit.NEXTVAL, 
+
+    'PAYMENT', 
+
+    TO_CHAR(:NEW.payment_id), 
+
+    'INSERT', 
+
+    'booking_id=' || :NEW.booking_id || 
+
+    ', amount='   || :NEW.amount || 
+
+    ', method='   || :NEW.method || 
+
+    ', status='   || :NEW.status 
+
+  ); 
+
+END; 
+
+/ 
+
+ 
